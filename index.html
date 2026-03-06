@@ -46,19 +46,24 @@ iframe{width:1080px;height:1080px;border:none;display:block;transform-origin:top
   <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next →</button>
 </div>
 <script>
-const TOTAL=8;let current=0,busy=false;
-const deck=document.getElementById('deck'),cover=document.getElementById('cover'),
+const TOTAL=8;let current=0,busy=false,hovered=false,autoTimer=null;
+const deckEl=document.getElementById('deck'),cover=document.getElementById('cover'),
       counter=document.getElementById('counter'),prevBtn=document.getElementById('prevBtn'),
       nextBtn=document.getElementById('nextBtn'),dots=document.querySelectorAll('.dot');
+
 function sizeDeck(){
   const size=Math.min(window.innerWidth,window.innerHeight-52-8,1080);
-  deck.style.width=size+'px';deck.style.height=size+'px';
+  deckEl.style.width=size+'px';deckEl.style.height=size+'px';
   const sc=size/1080;
   document.querySelectorAll('iframe').forEach(f=>f.style.transform=`scale(${sc})`);
 }
 sizeDeck();window.addEventListener('resize',sizeDeck);
+
 function goTo(index){
-  if(busy||index===current||index<0||index>=TOTAL)return;
+  // wrap around for auto-advance
+  if(index>=TOTAL) index=0;
+  if(index<0) index=TOTAL-1;
+  if(busy||index===current)return;
   busy=true;cover.classList.add('flash');
   setTimeout(()=>{
     document.getElementById('wrap_'+current).style.display='none';
@@ -67,16 +72,36 @@ function goTo(index){
     document.getElementById('wrap_'+current).style.display='block';
     dots[current].classList.add('active');
     counter.textContent=(current+1)+' / '+TOTAL;
-    prevBtn.disabled=current===0;nextBtn.disabled=current===TOTAL-1;
-    const frame=document.getElementById('frame_'+current);
-    const src=frame.src;frame.src='';frame.src=src;
+    prevBtn.disabled=false;nextBtn.disabled=false;
+    // NO iframe src reset — slides stay loaded
     setTimeout(()=>{cover.classList.remove('flash');busy=false;},300);
   },240);
 }
-function changeSlide(dir){goTo(current+dir);}
+
+function changeSlide(dir){
+  resetAutoTimer();
+  goTo(current+dir);
+}
+
+// ── AUTO-ADVANCE: 7 seconds per slide, loops, pauses on hover ──
+function startAutoTimer(){
+  autoTimer=setInterval(()=>{
+    if(!hovered&&!busy) goTo(current+1);
+  },7000);
+}
+function resetAutoTimer(){
+  clearInterval(autoTimer);
+  startAutoTimer();
+}
+deckEl.addEventListener('mouseenter',()=>{ hovered=true; });
+deckEl.addEventListener('mouseleave',()=>{ hovered=false; });
+
+// Start auto-advance immediately
+startAutoTimer();
+
 document.addEventListener('keydown',e=>{
-  if(e.key==='ArrowRight'||e.key==='ArrowDown')changeSlide(1);
-  if(e.key==='ArrowLeft'||e.key==='ArrowUp')changeSlide(-1);
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'){resetAutoTimer();goTo(current+1);}
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp'){resetAutoTimer();goTo(current-1);}
 });
 </script>
 
@@ -320,41 +345,6 @@ document.addEventListener('keydown',e=>{
     try { startMusic(); } catch(e) {}
   }, 500);
 
-})();
-</script>
-
-
-<script>
-// ── AUTO-ADVANCE: 7 seconds per slide, pauses on hover ──
-(function(){
-  const INTERVAL = 7000;
-  let timer = null;
-  let paused = false;
-
-  function startTimer() {
-    if (timer) clearInterval(timer);
-    timer = setInterval(() => {
-      if (!paused) {
-        const next = (current + 1) % TOTAL;
-        goTo(next);
-      }
-    }, INTERVAL);
-  }
-
-  // Pause on hover over deck
-  const deckEl = document.getElementById('deck');
-  deckEl.addEventListener('mouseenter', () => { paused = true; });
-  deckEl.addEventListener('mouseleave', () => { paused = false; });
-
-  // Start after 2 second delay
-  setTimeout(startTimer, 2000);
-
-  // Restart timer on manual navigation
-  const origGoTo = window.goTo;
-  window.goTo = function(index) {
-    origGoTo(index);
-    startTimer(); // reset timer on manual click
-  };
 })();
 </script>
 
