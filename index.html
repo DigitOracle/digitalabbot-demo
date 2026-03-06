@@ -323,5 +323,40 @@ document.addEventListener('keydown',e=>{
 })();
 </script>
 
+
+<script>
+// ── AUTO-ADVANCE: 7 seconds per slide, pauses on hover ──
+(function(){
+  const INTERVAL = 7000;
+  let timer = null;
+  let paused = false;
+
+  function startTimer() {
+    if (timer) clearInterval(timer);
+    timer = setInterval(() => {
+      if (!paused) {
+        const next = (current + 1) % TOTAL;
+        goTo(next);
+      }
+    }, INTERVAL);
+  }
+
+  // Pause on hover over deck
+  const deckEl = document.getElementById('deck');
+  deckEl.addEventListener('mouseenter', () => { paused = true; });
+  deckEl.addEventListener('mouseleave', () => { paused = false; });
+
+  // Start after 2 second delay
+  setTimeout(startTimer, 2000);
+
+  // Restart timer on manual navigation
+  const origGoTo = window.goTo;
+  window.goTo = function(index) {
+    origGoTo(index);
+    startTimer(); // reset timer on manual click
+  };
+})();
+</script>
+
 </body>
 </html>
